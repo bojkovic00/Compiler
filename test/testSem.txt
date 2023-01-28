@@ -1,0 +1,105 @@
+
+program semTest
+
+	//nepoklapanje tipova
+	const int broj = 's';
+	const char slovo = 5;
+	const bool tacno = 5;
+	
+	//oporavak od greske
+	novitip a=0;
+
+	//dva puta deklarisana
+	int kop;
+	int kop;
+
+	int niz[];
+	int b;
+	const int konst=5;
+	const char slovo='s';
+	int curr;
+	int suma;
+{
+	
+	int sum(int z, int d)
+	{
+		//nije int tipa
+		return 'd';
+	}
+	
+	int sumDobra(int z, int d){
+		return z+d;
+	}
+
+
+	void main()	
+	
+	{
+	
+	//niz mora biti sa leve strane
+	b=new int[3];
+	
+	//expr mora biti int
+	niz=new int[slovo];
+	
+	//ok
+	niz=new int[3];
+	
+	//ne sme konstanta sa leve strane
+	konst++;
+	konst--;
+	//ok
+	b++;
+	
+	//ne sme van petlje
+	break;
+	continue;
+	
+	//Zabranjeno je ucitavati u konstantu
+	read(konst);
+	
+	//ne moze niz da se stampa
+	print(niz);
+	
+	//tip mora biti bool za if else
+	if(5){}
+	
+	//tipovi moraju biti kompatibilni
+	if(5<slovo){}
+	if(niz<b){}
+	
+	//tip mora biti bool za while
+	while(5){}
+	
+	//b mora biti niz
+	b.foreach(curr => print(curr););
+			
+	//los tip ar
+	suma=sum(3,'c');
+	
+	//fali arg
+	suma=sum(3);
+	
+	//previse arg
+	suma=sum(3,4,5);
+	
+	//ok
+	suma=sum(3,4);
+	
+	//mull oba moraju biti int
+	curr=5*slovo;
+	curr=3+slovo;
+	curr=2/slovo;
+	curr=1-slovo;
+	
+	//ime nije globalna funkcija programa
+	b();
+	
+	//tip iz minusa mora biti int
+	b=-slovo;
+	
+
+	}
+}
+
+

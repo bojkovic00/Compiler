@@ -1,0 +1,321 @@
+package rs.ac.bg.etf.pp1;
+
+//dodala od andj
+import java.util.*;
+
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+
+// import java.io.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+
+parser code {:
+	
+	boolean errorDetected = false;
+	
+	Logger log = Logger.getLogger(getClass());
+   
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	errorDetected = true;
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+    
+   
+    
+:}
+
+scan with {:
+	Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+
+terminal PROG, PRINT, RETURN, VOID, READ, NEW, IF, ELSE, WHILE, BREAK, CONTINUE, FOREACH, CONST;
+terminal JEDNAKO, JEDNAKOJEDNAKO, NIJEJEDNAKO, VECE, VECEJEDNAKO, MANJE, MANJEJEDNAKO, SLEDI;
+terminal TACZAR, ZAREZ, TACKA;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, LUGLASTA, RUGLASTA;
+terminal PLUSPLUS, MINUSMINUS, PLUS, MINUS, PUTA, PODELJENO, PROCENAT;
+terminal OR, AND;
+terminal Integer NUMCONST ;
+terminal String IDENT ;
+terminal String CHARCONST;
+terminal  String BOOLCONST;
+
+
+nonterminal Program Program;
+nonterminal ListaVarDeklaracija ListaVarDeklaracija;
+nonterminal NovaDeklaracija NovaDeklaracija;
+nonterminal DeklProm DeklProm ;
+nonterminal
+ Uglaste Uglaste   ;
+nonterminal Greska Greska  ;
+
+nonterminal ListaMetodDeklaracija ListaMetodDeklaracija;
+nonterminal DeklMetoda DeklMetoda;
+nonterminal NovaMetoda NovaMetoda;
+nonterminal ListaPromNizTip ListaPromNizTip ;
+nonterminal Promenljive Promenljive ;
+nonterminal ArgumentiFje ArgumentiFje;
+nonterminal Argumenti Argumenti;
+
+
+nonterminal StatementList StatementList;
+nonterminal Statement Statement;
+nonterminal DesignatorStatement DesignatorStatement;
+nonterminal Assignop Assignop;
+nonterminal MozdaDesignator MozdaDesignator;
+nonterminal ListaMozdaDesignator ListaMozdaDesignator;
+nonterminal ListaNumKonstanti ListaNumKonstanti;
+nonterminal PocetakWhile PocetakWhile;
+
+nonterminal Uslov Uslov;
+nonterminal ListaOr ListaOr;
+nonterminal CondTerm CondTerm;
+nonterminal ListaAnd ListaAnd;
+nonterminal Relop Relop;
+nonterminal PocetakIf PocetakIf;
+nonterminal PocetakForEach PocetakForEach ;
+
+nonterminal   AddOperatori AddOperatori;
+nonterminal MulOperatori MulOperatori;
+nonterminal  IzdvojiLevuZagradu IzdvojiLevuZagradu;
+nonterminal IzdvojiMinus IzdvojiMinus;
+nonterminal Pars Pars;
+nonterminal ActPars ActPars;
+nonterminal PocetakElse PocetakElse;
+nonterminal DesignatorFor DesignatorFor;
+
+nonterminal PocetakDes PocetakDes;
+nonterminal KrajDes KrajDes;
+nonterminal PreZavrsni PreZavrsni;
+nonterminal Zavrsni Zavrsni;
+nonterminal ZarezDes ZarezDes;
+
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ImePrograma, ForIdent, ListaPromNiz, PovratniTip, PovratniVoid, Designator, ListaMulopFactor, ListaAddopTerm, ImeNiza ;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct VrsteKonst, ListaKonst , DeklKonst ,PrvaKonst, Type, Factor, Izraz, Term , ListaRelop, CondFact ;
+
+
+precedence left ELSE;
+
+Program ::= (Program) PROG ImePrograma:p ListaVarDeklaracija:L1 ListaMetodDeklaracija:L2 {: RESULT=new Program(p, L1, L2); RESULT.setLine(pleft); :}  ;
+
+ImePrograma ::= (ImePrograma)  IDENT:pName {: RESULT=new ImePrograma(pName); RESULT.setLine(pNameleft); :} ;
+
+ListaVarDeklaracija ::= (ListaVarDeklaracijaI) ListaVarDeklaracija:L1 NovaDeklaracija:N2 {: RESULT=new ListaVarDeklaracijaI(L1, N2); RESULT.setLine(L1left); :}  
+				|
+				(NemaListaVarDeklaracija) {: RESULT=new NemaListaVarDeklaracija(); :}/* epsilon */ 
+				;
+				
+NovaDeklaracija ::= (DeklPromenljive) DeklProm:D1 {: RESULT=new DeklPromenljive(D1); RESULT.setLine(D1left); :}
+					| (DeklKonstante) DeklKonst:D1 {: RESULT=new DeklKonstante(D1); RESULT.setLine(D1left); :}
+;
+
+DeklProm ::= (DeklPromI) Type:tipProm IDENT:imeProm Uglaste:U1 ListaPromNiz:L2 TACZAR {: RESULT=new DeklPromI(tipProm, imeProm, U1, L2); RESULT.setLine(tipPromleft); :} 
+			| error ListaPromNiz:l TACZAR:a {: parser.report_error("Izvrsen oporavak od greske -----  na liniji  "+( lleft < aleft?lleft:aleft) , null);  :} {: RESULT=new DeklPromDerived1(l); RESULT.setLine(lleft); :} 			;
+
+ListaPromNiz ::= (ListaPromNizI) ListaPromNiz:L1 ZAREZ IDENT:prom Uglaste:U2 {: RESULT=new ListaPromNizI(L1, prom, U2); RESULT.setLine(L1left); :} 
+				|(ListaPromNizGreska)ListaPromNiz:L1 ZAREZ Greska:G2 {: RESULT=new ListaPromNizGreska(L1, G2); RESULT.setLine(L1left); :}
+				|(NemaListaPromNiza) {: RESULT=new NemaListaPromNiza(); :} ;
+							
+Greska ::= (GreskaI) error:her {: parser.report_error("MOREVARLIST Izvrsen oporavak do , ili ; iz liste u liniji " + herleft ,null);  :} {: RESULT=new GreskaI(); :} ;
+
+
+DeklKonst ::= (DeklKonstI) CONST Type:tipKonst PrvaKonst:P1 ListaKonst:L2 TACZAR {: RESULT=new DeklKonstI(tipKonst, P1, L2); RESULT.setLine(tipKonstleft); :} ;
+PrvaKonst ::=(PrvaKonst) IDENT:imeProm JEDNAKO VrsteKonst:V1 {: RESULT=new PrvaKonst(imeProm, V1); RESULT.setLine(imePromleft); :} ;
+ListaKonst ::= (ListaKonstI) ListaKonst:imaJosKonst ZAREZ IDENT:novaKonst JEDNAKO VrsteKonst:tipKonst {: RESULT=new ListaKonstI(imaJosKonst, novaKonst, tipKonst); RESULT.setLine(imaJosKonstleft); :}
+			| (NemaListaKonst) {: RESULT=new NemaListaKonst(); :} ;
+VrsteKonst ::= (VrsteKonstNUM) NUMCONST:intVrednost {: RESULT=new VrsteKonstNUM(intVrednost); RESULT.setLine(intVrednostleft); :}
+			| (VrsteKonstCHAR) CHARCONST:charVrednost {: RESULT=new VrsteKonstCHAR(charVrednost); RESULT.setLine(charVrednostleft); :}
+			| (VrsteKonstBOOL) BOOLCONST:boolVrednost {: RESULT=new VrsteKonstBOOL(boolVrednost); RESULT.setLine(boolVrednostleft); :} ;
+
+
+Uglaste ::= (UglasteZagrade) LUGLASTA RUGLASTA {: RESULT=new UglasteZagrade(); :}
+			| (NemaUglasteZ) {: RESULT=new NemaUglasteZ(); :};
+			
+Type ::= (Type) IDENT:typeName {: RESULT=new Type(typeName); RESULT.setLine(typeNameleft); :} 
+;
+
+//METODE DO TELA
+
+ListaMetodDeklaracija ::= (ListaMetodDeklaracijaI) LBRACE DeklMetoda:D1 RBRACE {: RESULT=new ListaMetodDeklaracijaI(D1); RESULT.setLine(D1left); :};
+
+DeklMetoda ::= (DeklMetodaI) DeklMetoda:D1 NovaMetoda:N2 {: RESULT=new DeklMetodaI(D1, N2); RESULT.setLine(D1left); :} 
+				| (NemaDeklMetoda) {: RESULT=new NemaDeklMetoda(); :};
+				
+NovaMetoda ::= (NovaMetodaI) PovratniTip:P1 LPAREN ArgumentiFje:A2 RPAREN  Promenljive:P3 LBRACE StatementList:S4 RBRACE {: RESULT=new NovaMetodaI(P1, A2, P3, S4); RESULT.setLine(P1left); :}
+				| (NovaVoidMetoda) PovratniVoid:P1 LPAREN ArgumentiFje:A2 RPAREN Promenljive:P3 LBRACE StatementList:S4 RBRACE {: RESULT=new NovaVoidMetoda(P1, A2, P3, S4); RESULT.setLine(P1left); :} ;
+
+//DODALA OD V , AKO NE TREBA OBRISI
+PovratniTip ::= (PovratniTip) Type:retType IDENT:imeFje {: RESULT=new PovratniTip(retType, imeFje); RESULT.setLine(retTypeleft); :} ;
+PovratniVoid ::= (PovratniVoid) VOID IDENT:imeFje {: RESULT=new PovratniVoid(imeFje); RESULT.setLine(imeFjeleft); :} ;
+
+Promenljive ::= (PromenljiveI) Promenljive:P1 DeklProm:D2 {: RESULT=new PromenljiveI(P1, D2); RESULT.setLine(P1left); :}
+				| (NemaPromenljive) {: RESULT=new NemaPromenljive(); :};
+
+ArgumentiFje ::= (ArgumentiFjeI) Argumenti:A1 {: RESULT=new ArgumentiFjeI(A1); RESULT.setLine(A1left); :}
+				| (NemaArgumentiFje) {: RESULT=new NemaArgumentiFje(); :} ;
+
+Argumenti ::= (ArgumentiI) Type:tipArg IDENT:imeArg Uglaste:U1 ListaPromNizTip:L2 {: RESULT=new ArgumentiI(tipArg, imeArg, U1, L2); RESULT.setLine(tipArgleft); :} ;
+		
+ListaPromNizTip ::= (ListaPromNizTipI) ListaPromNizTip:L1 ZAREZ Type:tipArg IDENT:imeArg Uglaste:U2 {: RESULT=new ListaPromNizTipI(L1, tipArg, imeArg, U2); RESULT.setLine(L1left); :} 
+				|(NemaListaPromNizTip) {: RESULT=new NemaListaPromNizTip(); :} ;
+
+
+//METODE TELO => STATEMENT
+
+StatementList ::=(StatementListI) StatementList:S1 Statement:S2 {: RESULT=new StatementListI(S1, S2); RESULT.setLine(S1left); :}
+				| (NemaStatementList) {: RESULT=new NemaStatementList(); :} ;
+				
+				
+Statement ::=(StatementDesig) DesignatorStatement:D1 TACZAR {: RESULT=new StatementDesig(D1); RESULT.setLine(D1left); :} 
+	| (StatementRead) READ LPAREN Designator:D1 RPAREN TACZAR {: RESULT=new StatementRead(D1); RESULT.setLine(D1left); :}
+	| (StatementPrint) PRINT LPAREN Izraz:I1 ListaNumKonstanti:L2 RPAREN TACZAR {: RESULT=new StatementPrint(I1, L2); RESULT.setLine(I1left); :}
+	| (StatementIf) PocetakIf:P1 LPAREN Uslov:U2 RPAREN Statement:S3 {: RESULT=new StatementIf(P1, U2, S3); RESULT.setLine(P1left); :} 
+	| (StatementIfElse) PocetakIf:P1 LPAREN Uslov:U2 RPAREN Statement:S3 PocetakElse:P4 Statement:S5 {: RESULT=new StatementIfElse(P1, U2, S3, P4, S5); RESULT.setLine(P1left); :}
+	| (StatementWhile) PocetakWhile:P1 LPAREN Uslov:U2 RPAREN Statement:S3 {: RESULT=new StatementWhile(P1, U2, S3); RESULT.setLine(P1left); :}
+	| (StatementBreak) BREAK TACZAR {: RESULT=new StatementBreak(); :}	
+	| (StatementContinue) CONTINUE TACZAR {: RESULT=new StatementContinue(); :}
+	| (StatementReturn) RETURN TACZAR {: RESULT=new StatementReturn(); :}	
+	| (StatementReturnIzraz) RETURN Izraz:I1 TACZAR {: RESULT=new StatementReturnIzraz(I1); RESULT.setLine(I1left); :}
+	
+	| (StatementForeach) DesignatorFor:D1 TACKA PocetakForEach:P2 LPAREN ForIdent:F3 SLEDI Statement:S4 RPAREN TACZAR {: RESULT=new StatementForeach(D1, P2, F3, S4); RESULT.setLine(D1left); :}
+	
+	| (StatementListaStatement) LBRACE StatementList:S1 RBRACE {: RESULT=new StatementListaStatement(S1); RESULT.setLine(S1left); :}
+;
+	ForIdent ::=(ForIdent) IDENT:iter {: RESULT=new ForIdent(iter); RESULT.setLine(iterleft); :};	
+	PocetakWhile ::= (PocetakWhileI) WHILE {: RESULT=new PocetakWhileI(); :} ;
+	PocetakElse ::= (PocetakElseI) ELSE {: RESULT=new PocetakElseI(); :} ;
+	PocetakIf ::=(PocetakIfI) IF {: RESULT=new PocetakIfI(); :};
+	PocetakForEach ::=(PocetakForEachI) FOREACH {: RESULT=new PocetakForEachI(); :};
+	DesignatorFor ::=(DesignatorForI) Designator:D1 {: RESULT=new DesignatorForI(D1); RESULT.setLine(D1left); :};
+	
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+
+ListaNumKonstanti ::=(ListaNumKonstantiI) ZAREZ NUMCONST:sirina {: RESULT=new ListaNumKonstantiI(sirina); RESULT.setLine(sirinaleft); :}
+					| (NemaListaNumKonstanti) {: RESULT=new NemaListaNumKonstanti(); :} ;
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Uslov ::= (UslovI) CondTerm:C1 ListaOr:L2 {: RESULT=new UslovI(C1, L2); RESULT.setLine(C1left); :};
+		
+ListaOr ::=(ListaOrI) ListaOr:L1 OR CondTerm:C2 {: RESULT=new ListaOrI(L1, C2); RESULT.setLine(L1left); :}
+		| (NemaListaOr) {: RESULT=new NemaListaOr(); :};
+		
+CondTerm ::= (CondTermI) CondFact:C1 ListaAnd:L2 {: RESULT=new CondTermI(C1, L2); RESULT.setLine(C1left); :};
+
+ListaAnd ::= (ListaAndI) ListaAnd:L1 AND CondFact:C2 {: RESULT=new ListaAndI(L1, C2); RESULT.setLine(L1left); :}
+			|
+			(NemaListaAnd) {: RESULT=new NemaListaAnd(); :};	
+
+CondFact ::= (CondFactI) Izraz:I1 ListaRelop:L2 {: RESULT=new CondFactI(I1, L2); RESULT.setLine(I1left); :};
+
+ListaRelop ::= (ListaRelopI) Relop:R1 Izraz:I2 {: RESULT=new ListaRelopI(R1, I2); RESULT.setLine(R1left); :}
+			| (NemaListaRelop) {: RESULT=new NemaListaRelop(); :};
+			
+Relop ::= (RelopJednakoJednako) JEDNAKOJEDNAKO {: RESULT=new RelopJednakoJednako(); :}
+		| (RelopNijeJednako) NIJEJEDNAKO {: RESULT=new RelopNijeJednako(); :} 
+		| (RelopVece) VECE {: RESULT=new RelopVece(); :} 
+		| (RelopVeceJednako) VECEJEDNAKO {: RESULT=new RelopVeceJednako(); :} 
+		| (RelopManje) MANJE {: RESULT=new RelopManje(); :} 
+		| (RelopManjeJednako) MANJEJEDNAKO {: RESULT=new RelopManjeJednako(); :};
+		
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+DesignatorStatement ::= (DesigDodelaVred) Designator:D1 Assignop:A2 Izraz:I3 {: RESULT=new DesigDodelaVred(D1, A2, I3); RESULT.setLine(D1left); :}
+				|	error TACZAR:l {: parser.report_error("Izvrsen oporavak od greske ; na liniji  " +lleft, null);  :} {: RESULT=new DesignatorStatementDerived1(); :}
+				
+				| (DesignatorStatementD) PocetakDes:P1 MozdaDesignator:M2 ListaMozdaDesignator:L3 KrajDes:K4 Assignop:A5 PreZavrsni:P6 {: RESULT=new DesignatorStatementD(P1, M2, L3, K4, A5, P6); RESULT.setLine(P1left); :}
+				
+				| (DesigPlusPlus) Designator:naziv PLUSPLUS {: RESULT=new DesigPlusPlus(naziv); RESULT.setLine(nazivleft); :}
+				| (DesigMinusMinus) Designator:naziv MINUSMINUS {: RESULT=new DesigMinusMinus(naziv); RESULT.setLine(nazivleft); :}
+				| (DesigFjaSaArg) Designator:D1 LPAREN Pars:P2 RPAREN {: RESULT=new DesigFjaSaArg(D1, P2); RESULT.setLine(D1left); :}	
+				;		
+PreZavrsni ::=(PreZavrsni) Zavrsni:Z1 {: RESULT=new PreZavrsni(Z1); RESULT.setLine(Z1left); :};
+Zavrsni	::=(Zavrsni) Designator:D1 {: RESULT=new Zavrsni(D1); RESULT.setLine(D1left); :};
+	
+PocetakDes ::= (PocetakDes) LUGLASTA {: RESULT=new PocetakDes(); :};
+KrajDes ::= (KrajDes) RUGLASTA {: RESULT=new KrajDes(); :};
+
+ListaMozdaDesignator ::= (ListaMozdaDesignatorI) ListaMozdaDesignator:L1 ZarezDes:Z2 MozdaDesignator:M3 {: RESULT=new ListaMozdaDesignatorI(L1, Z2, M3); RESULT.setLine(L1left); :}
+					| (NemaListaMozdaDesignator) {: RESULT=new NemaListaMozdaDesignator(); :};
+
+ZarezDes ::= (ZarezDes) ZAREZ {: RESULT=new ZarezDes(); :};
+
+
+MozdaDesignator ::= (MozdaDesignatorI) Designator:D1 {: RESULT=new MozdaDesignatorI(D1); RESULT.setLine(D1left); :}
+				| (NemaMozdaDesignator) {: RESULT=new NemaMozdaDesignator(); :};	
+
+Designator ::= (DesignatorIdent) IDENT:desName {: RESULT=new DesignatorIdent(desName); RESULT.setLine(desNameleft); :}
+				| (DesignatorIzraz) ImeNiza:I1 LUGLASTA Izraz:I2 RUGLASTA {: RESULT=new DesignatorIzraz(I1, I2); RESULT.setLine(I1left); :} ;
+
+ImeNiza ::= (ImeNiza) IDENT:desName {: RESULT=new ImeNiza(desName); RESULT.setLine(desNameleft); :} ;
+
+Assignop ::=(OprerJednako) JEDNAKO {: RESULT=new OprerJednako(); :};
+	
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+Izraz ::= (IzrazSaSub) IzdvojiMinus:I1 Term:T2 ListaAddopTerm:L3 {: RESULT=new IzrazSaSub(I1, T2, L3); RESULT.setLine(I1left); :}
+		| (IzrazBezSub) Term:T1 ListaAddopTerm:L2 {: RESULT=new IzrazBezSub(T1, L2); RESULT.setLine(T1left); :}	;
+
+IzdvojiMinus ::= (IzdvojiMinusI) MINUS {: RESULT=new IzdvojiMinusI(); :};
+
+ListaAddopTerm ::=(ListaAddopTermI) ListaAddopTerm:L1 AddOperatori:A2 Term:T3 {: RESULT=new ListaAddopTermI(L1, A2, T3); RESULT.setLine(L1left); :}
+				| (NemaListaAddopTermI) {: RESULT=new NemaListaAddopTermI(); :} ;
+
+AddOperatori ::= (AddOperatoriPlus) PLUS {: RESULT=new AddOperatoriPlus(); :}
+			| (AddOperatoriMinus) MINUS {: RESULT=new AddOperatoriMinus(); :};
+		
+Term ::=(TermI) Factor:F1 ListaMulopFactor:L2 {: RESULT=new TermI(F1, L2); RESULT.setLine(F1left); :} ;	
+	
+				
+ListaMulopFactor ::= (ListaMulopFactorI) ListaMulopFactor:L1 MulOperatori:M2 Factor:F3 {: RESULT=new ListaMulopFactorI(L1, M2, F3); RESULT.setLine(L1left); :}
+					| (NemaListaMulopFactor) {: RESULT=new NemaListaMulopFactor(); :};
+
+MulOperatori ::= (MulOperatoriPuta) PUTA {: RESULT=new MulOperatoriPuta(); :}
+		| (MulOperatoriPodeljeno) PODELJENO {: RESULT=new MulOperatoriPodeljeno(); :}
+		| (MulOperatoriProcenat) PROCENAT {: RESULT=new MulOperatoriProcenat(); :} ;
+	
+Factor ::= (FactorNumKonst) NUMCONST:broj {: RESULT=new FactorNumKonst(broj); RESULT.setLine(brojleft); :}  
+		| (FactorCharKonst) CHARCONST:karakter {: RESULT=new FactorCharKonst(karakter); RESULT.setLine(karakterleft); :} 
+		| (FactorIzraz) IzdvojiLevuZagradu:I1 Izraz:I2 RPAREN {: RESULT=new FactorIzraz(I1, I2); RESULT.setLine(I1left); :}
+		| (FactorBoolKonst) BOOLCONST:vrednost {: RESULT=new FactorBoolKonst(vrednost); RESULT.setLine(vrednostleft); :}
+		| (FactorNovSimbol) NEW:NoviS Type:tipNovogSimbola LUGLASTA Izraz:I1  RUGLASTA {: RESULT=new FactorNovSimbol(tipNovogSimbola, I1); RESULT.setLine(tipNovogSimbolaleft); :}
+		| (FactorDesignator) Designator:D1 {: RESULT=new FactorDesignator(D1); RESULT.setLine(D1left); :}
+		| (FactorDesignatorPars) Designator:D1  LPAREN Pars:P2 RPAREN {: RESULT=new FactorDesignatorPars(D1, P2); RESULT.setLine(D1left); :};
+		
+
+//NE ZNAM ZASTO SE IZDVAJA KOD VALZA POGLEDAJ U CODE GENERATORU 
+IzdvojiLevuZagradu ::= (IzdvojiLevuZagraduLZ) LPAREN {: RESULT=new IzdvojiLevuZagraduLZ(); :};
+
+Pars ::=(ParsI) ActPars:A1 {: RESULT=new ParsI(A1); RESULT.setLine(A1left); :}
+		| (NemaPars) {: RESULT=new NemaPars(); :} ;
+
+ActPars ::=(ActParameters) ActPars:A1 ZAREZ Izraz:I2 {: RESULT=new ActParameters(A1, I2); RESULT.setLine(A1left); :}
+		| (ActPararameter) Izraz:I1 {: RESULT=new ActPararameter(I1); RESULT.setLine(I1left); :} ;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	

@@ -1,0 +1,286 @@
+package rs.ac.bg.etf.pp1;
+
+//dodala od andj
+import java.util.*;
+
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+
+// import java.io.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+
+parser code {:
+	
+	boolean errorDetected = false;
+	
+	Logger log = Logger.getLogger(getClass());
+   
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	errorDetected = true;
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+    
+   
+    
+:}
+
+scan with {:
+	Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+
+terminal PROG, PRINT, RETURN, VOID, READ, NEW, IF, ELSE, WHILE, BREAK, CONTINUE, FOREACH, CONST;
+terminal JEDNAKO, JEDNAKOJEDNAKO, NIJEJEDNAKO, VECE, VECEJEDNAKO, MANJE, MANJEJEDNAKO, SLEDI;
+terminal TACZAR, ZAREZ, TACKA;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, LUGLASTA, RUGLASTA;
+terminal PLUSPLUS, MINUSMINUS, PLUS, MINUS, PUTA, PODELJENO, PROCENAT;
+terminal OR, AND;
+terminal Integer NUMCONST ;
+terminal String IDENT ;
+terminal String CHARCONST;
+terminal  String BOOLCONST;
+
+
+nonterminal Program, ListaVarDeklaracija, NovaDeklaracija, DeklProm ,
+ Uglaste   , Greska  ;
+
+nonterminal ListaMetodDeklaracija, DeklMetoda, NovaMetoda, ListaPromNizTip , Promenljive , ArgumentiFje, Argumenti;
+
+
+nonterminal StatementList, Statement, DesignatorStatement, Assignop, MozdaDesignator, ListaMozdaDesignator, ListaNumKonstanti, PocetakWhile;
+
+nonterminal Uslov, ListaOr, CondTerm, ListaAnd, Relop, PocetakIf, PocetakForEach ;
+
+nonterminal   AddOperatori, MulOperatori,  IzdvojiLevuZagradu, IzdvojiMinus, Pars, ActPars, PocetakElse, DesignatorFor;
+
+nonterminal PocetakDes, KrajDes, PreZavrsni, Zavrsni, ZarezDes;
+
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ImePrograma, ForIdent, ListaPromNiz, PovratniTip, PovratniVoid, Designator, ListaMulopFactor, ListaAddopTerm, ImeNiza ;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct VrsteKonst, ListaKonst , DeklKonst ,PrvaKonst, Type, Factor, Izraz, Term , ListaRelop, CondFact ;
+
+
+precedence left ELSE;
+
+Program ::= (Program) PROG ImePrograma:p ListaVarDeklaracija ListaMetodDeklaracija  ;
+
+ImePrograma ::= (ImePrograma)  IDENT:pName ;
+
+ListaVarDeklaracija ::= (ListaVarDeklaracijaI) ListaVarDeklaracija NovaDeklaracija  
+				|
+				(NemaListaVarDeklaracija)/* epsilon */ 
+				;
+				
+NovaDeklaracija ::= (DeklPromenljive) DeklProm
+					| (DeklKonstante) DeklKonst
+;
+
+DeklProm ::= (DeklPromI) Type:tipProm IDENT:imeProm Uglaste ListaPromNiz TACZAR 
+			| error ListaPromNiz:l TACZAR:a {: parser.report_error("Izvrsen oporavak od greske -----  na liniji  "+( lleft < aleft?lleft:aleft) , null);  :} 			;
+
+ListaPromNiz ::= (ListaPromNizI) ListaPromNiz ZAREZ IDENT:prom Uglaste 
+				|(ListaPromNizGreska)ListaPromNiz ZAREZ Greska
+				|(NemaListaPromNiza) ;
+							
+Greska ::= (GreskaI) error:her {: parser.report_error("MOREVARLIST Izvrsen oporavak do , ili ; iz liste u liniji " + herleft ,null);  :} ;
+
+
+DeklKonst ::= (DeklKonstI) CONST Type:tipKonst PrvaKonst ListaKonst TACZAR ;
+PrvaKonst ::=(PrvaKonst) IDENT:imeProm JEDNAKO VrsteKonst ;
+ListaKonst ::= (ListaKonstI) ListaKonst:imaJosKonst ZAREZ IDENT:novaKonst JEDNAKO VrsteKonst:tipKonst
+			| (NemaListaKonst) ;
+VrsteKonst ::= (VrsteKonstNUM) NUMCONST:intVrednost
+			| (VrsteKonstCHAR) CHARCONST:charVrednost
+			| (VrsteKonstBOOL) BOOLCONST:boolVrednost ;
+
+
+Uglaste ::= (UglasteZagrade) LUGLASTA RUGLASTA
+			| (NemaUglasteZ);
+			
+Type ::= (Type) IDENT:typeName 
+;
+
+//METODE DO TELA
+
+ListaMetodDeklaracija ::= (ListaMetodDeklaracijaI) LBRACE DeklMetoda RBRACE;
+
+DeklMetoda ::= (DeklMetodaI) DeklMetoda NovaMetoda 
+				| (NemaDeklMetoda);
+				
+NovaMetoda ::= (NovaMetodaI) PovratniTip LPAREN ArgumentiFje RPAREN  Promenljive LBRACE StatementList RBRACE
+				| (NovaVoidMetoda) PovratniVoid LPAREN ArgumentiFje RPAREN Promenljive LBRACE StatementList RBRACE ;
+
+//DODALA OD V , AKO NE TREBA OBRISI
+PovratniTip ::= (PovratniTip) Type:retType IDENT:imeFje ;
+PovratniVoid ::= (PovratniVoid) VOID IDENT:imeFje ;
+
+Promenljive ::= (PromenljiveI) Promenljive DeklProm
+				| (NemaPromenljive);
+
+ArgumentiFje ::= (ArgumentiFjeI) Argumenti
+				| (NemaArgumentiFje) ;
+
+Argumenti ::= (ArgumentiI) Type:tipArg IDENT:imeArg Uglaste ListaPromNizTip ;
+		
+ListaPromNizTip ::= (ListaPromNizTipI) ListaPromNizTip ZAREZ Type:tipArg IDENT:imeArg Uglaste 
+				|(NemaListaPromNizTip) ;
+
+
+//METODE TELO => STATEMENT
+
+StatementList ::=(StatementListI) StatementList Statement
+				| (NemaStatementList) ;
+				
+				
+Statement ::=(StatementDesig) DesignatorStatement TACZAR 
+	| (StatementRead) READ LPAREN Designator RPAREN TACZAR
+	| (StatementPrint) PRINT LPAREN Izraz ListaNumKonstanti RPAREN TACZAR
+	| (StatementIf) PocetakIf LPAREN Uslov RPAREN Statement 
+	| (StatementIfElse) PocetakIf LPAREN Uslov RPAREN Statement PocetakElse Statement
+	| (StatementWhile) PocetakWhile LPAREN Uslov RPAREN Statement
+	| (StatementBreak) BREAK TACZAR	
+	| (StatementContinue) CONTINUE TACZAR
+	| (StatementReturn) RETURN TACZAR	
+	| (StatementReturnIzraz) RETURN Izraz TACZAR
+	
+	| (StatementForeach) DesignatorFor TACKA PocetakForEach LPAREN ForIdent SLEDI Statement RPAREN TACZAR
+	
+	| (StatementListaStatement) LBRACE StatementList RBRACE
+;
+	ForIdent ::=(ForIdent) IDENT:iter;	
+	PocetakWhile ::= (PocetakWhileI) WHILE ;
+	PocetakElse ::= (PocetakElseI) ELSE ;
+	PocetakIf ::=(PocetakIfI) IF;
+	PocetakForEach ::=(PocetakForEachI) FOREACH;
+	DesignatorFor ::=(DesignatorForI) Designator;
+	
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+
+ListaNumKonstanti ::=(ListaNumKonstantiI) ZAREZ NUMCONST:sirina
+					| (NemaListaNumKonstanti) ;
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Uslov ::= (UslovI) CondTerm ListaOr;
+		
+ListaOr ::=(ListaOrI) ListaOr OR CondTerm
+		| (NemaListaOr);
+		
+CondTerm ::= (CondTermI) CondFact ListaAnd;
+
+ListaAnd ::= (ListaAndI) ListaAnd AND CondFact
+			|
+			(NemaListaAnd);	
+
+CondFact ::= (CondFactI) Izraz ListaRelop;
+
+ListaRelop ::= (ListaRelopI) Relop Izraz
+			| (NemaListaRelop);
+			
+Relop ::= (RelopJednakoJednako) JEDNAKOJEDNAKO
+		| (RelopNijeJednako) NIJEJEDNAKO 
+		| (RelopVece) VECE 
+		| (RelopVeceJednako) VECEJEDNAKO 
+		| (RelopManje) MANJE 
+		| (RelopManjeJednako) MANJEJEDNAKO;
+		
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+DesignatorStatement ::= (DesigDodelaVred) Designator Assignop Izraz
+				|	error TACZAR:l {: parser.report_error("Izvrsen oporavak od greske ; na liniji  " +lleft, null);  :}
+				
+				| (DesignatorStatementD) PocetakDes MozdaDesignator ListaMozdaDesignator KrajDes Assignop PreZavrsni
+				
+				| (DesigPlusPlus) Designator:naziv PLUSPLUS
+				| (DesigMinusMinus) Designator:naziv MINUSMINUS
+				| (DesigFjaSaArg) Designator LPAREN Pars RPAREN	
+				;		
+PreZavrsni ::=(PreZavrsni) Zavrsni;
+Zavrsni	::=(Zavrsni) Designator;
+	
+PocetakDes ::= (PocetakDes) LUGLASTA;
+KrajDes ::= (KrajDes) RUGLASTA;
+
+ListaMozdaDesignator ::= (ListaMozdaDesignatorI) ListaMozdaDesignator ZarezDes MozdaDesignator
+					| (NemaListaMozdaDesignator);
+
+ZarezDes ::= (ZarezDes) ZAREZ;
+
+
+MozdaDesignator ::= (MozdaDesignatorI) Designator
+				| (NemaMozdaDesignator);	
+
+Designator ::= (DesignatorIdent) IDENT:desName
+				| (DesignatorIzraz) ImeNiza LUGLASTA Izraz RUGLASTA ;
+
+ImeNiza ::= (ImeNiza) IDENT:desName ;
+
+Assignop ::=(OprerJednako) JEDNAKO;
+	
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+Izraz ::= (IzrazSaSub) IzdvojiMinus Term ListaAddopTerm
+		| (IzrazBezSub) Term ListaAddopTerm	;
+
+IzdvojiMinus ::= (IzdvojiMinusI) MINUS;
+
+ListaAddopTerm ::=(ListaAddopTermI) ListaAddopTerm AddOperatori Term
+				| (NemaListaAddopTermI) ;
+
+AddOperatori ::= (AddOperatoriPlus) PLUS
+			| (AddOperatoriMinus) MINUS;
+		
+Term ::=(TermI) Factor ListaMulopFactor ;	
+	
+				
+ListaMulopFactor ::= (ListaMulopFactorI) ListaMulopFactor MulOperatori Factor
+					| (NemaListaMulopFactor);
+
+MulOperatori ::= (MulOperatoriPuta) PUTA
+		| (MulOperatoriPodeljeno) PODELJENO
+		| (MulOperatoriProcenat) PROCENAT ;
+	
+Factor ::= (FactorNumKonst) NUMCONST:broj  
+		| (FactorCharKonst) CHARCONST:karakter 
+		| (FactorIzraz) IzdvojiLevuZagradu Izraz RPAREN
+		| (FactorBoolKonst) BOOLCONST:vrednost
+		| (FactorNovSimbol) NEW:NoviS Type:tipNovogSimbola LUGLASTA Izraz  RUGLASTA
+		| (FactorDesignator) Designator
+		| (FactorDesignatorPars) Designator  LPAREN Pars RPAREN;
+		
+
+//NE ZNAM ZASTO SE IZDVAJA KOD VALZA POGLEDAJ U CODE GENERATORU 
+IzdvojiLevuZagradu ::= (IzdvojiLevuZagraduLZ) LPAREN;
+
+Pars ::=(ParsI) ActPars
+		| (NemaPars) ;
+
+ActPars ::=(ActParameters) ActPars ZAREZ Izraz
+		| (ActPararameter) Izraz ;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	

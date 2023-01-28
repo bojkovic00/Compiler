@@ -1,0 +1,144 @@
+//Test 302
+
+program test302
+
+
+{
+
+	
+	void main()
+	{
+	
+		if(1==5 && 3!=3 && 4>4 || 6<6 || 7==7 && 8==8 || 9!=9 && 9!=9 ){ 
+		
+			if(9<0 && 8<0 ||8<9 || 9>0 && 8<0 && 8<0 && 8<0  ){
+			//....
+			
+				if(8>0 && 8<0 ||9>0){ 
+				// .......
+				
+				}*
+				
+			//......
+				
+				}
+		}
+		
+		
+		
+	}
+	
+	
+	
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+	 //U DesignatorStatement |(findMax) MAXSIMBOL Designator 
+	
+	
+	//DesignatorStatement ::= 	|(maaks) Designator Assignop MaxFind ;			
+//	MaxFind ::=(MaxFind) MAXSIMBOL Designator;		
+	 
+	
+
+	int adr1=0,adr2=0;;
+	int ucit=0;
+	public void visit(MaxFind izraz) {
+		Code.put(Code.pop);
+		
+		Obj niz=izraz.getDesignator().obj;
+		
+		Obj counter=new Obj(Obj.Var,"cntr",Tabela.intType);
+		counter.setAdr(3);
+		Code.loadConst(0);
+		Code.store(counter);
+		
+		Obj currMax=new Obj(Obj.Var,"cntr",Tabela.intType);
+		currMax.setAdr(4);
+		Code.loadConst(0);
+		Code.store(currMax);
+		
+		ucit=Code.pc;
+		System.out.println(ucit);
+		
+		//proveri index
+		Code.load(counter);
+		Code.load(niz);
+		Code.put(Code.arraylength);
+		Code.put(Code.jcc+Code.ge);
+		adr2=Code.pc;
+		Code.put2(0);
+		
+		
+		//proveri max
+		Code.load(niz);
+		Code.load(counter);
+		Code.put(Code.aload);
+		
+		Code.put(Code.dup);
+		Code.load(currMax);
+		
+		Code.put(Code.jcc+Code.lt);
+		adr1=Code.pc;
+		Code.put2(0);
+		
+		//promeni max
+		Code.put(Code.dup);
+		
+		Code.store(currMax);
+		
+		
+		
+		Code.fixup(adr1);
+		Code.put(Code.pop);
+		
+		
+		Code.load(counter);
+		Code.loadConst(1);
+		Code.put(Code.add);
+		Code.store(counter);
+		
+		Code.putJump(ucit);
+		
+		
+		//kraj
+		Code.fixup(adr2);
+		
+		Code.put(Code.pop);
+		
+		Code.load(currMax);
+		
+	}
+	
+	public void visit(Maaks izraz) {
+		Code.store(izraz.getDesignator().obj);
+	}
+	*/
